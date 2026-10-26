@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, customer_select, field_error %}
+{% block title %}Edit service history{% endblock %}
+
+{% block content %}
+{% call page_header('Edit service history', 'Correct the service details or update the record status.', 'RECORD #' ~ record.id) %}
+  <a class="btn btn-secondary" href="{{ url_for('main.service_history') }}">{{ icon('chevron-left', 16) }} Back to service history</a>
+{% endcall %}
+
+<div class="form-layout form-layout-narrow">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>{{ record.service }}</h2>
+        <p>{{ record.service_date|pretty_date }}</p>
+      </div>
+      {{ status_badge(record.status) }}
+    </div>
+    <form method="post" class="form-grid form-grid-2">
+      {{ csrf_field() }}
+      <div class="form-field span-all">
+        <label for="customer_id">Customer <span class="req">*</span></label>
+        {{ customer_select(customers, form.customer_id) }}
+        {{ field_error(errors, 'customer_id') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="service">Service <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('service') else '' }}" id="service" name="service" type="text" maxlength="200" list="service-options" value="{{ form.service }}" required>
+        {{ field_error(errors, 'service') }}
+      </div>
+      <div class="form-field">
+        <label for="service_date">Service date <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('service_date') else '' }}" id="service_date" name="service_date" type="date" value="{{ form.service_date }}" required>
+        {{ field_error(errors, 'service_date') }}
+      </div>
+      <div class="form-field">
+        <label for="status">Status</label>
+        <select class="input" id="status" name="status">
+          {% for status in status_choices %}<option value="{{ status }}" {% if form.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-field span-all">
+        <label for="technician">Technician</label>
+        <input class="input" id="technician" name="technician" type="text" maxlength="120" value="{{ form.technician }}">
+      </div>
+      <div class="form-field span-all">
+        <label for="notes">Notes</label>
+        <textarea class="input" id="notes" name="notes" rows="4" maxlength="2000">{{ form.notes }}</textarea>
+      </div>
+      <div class="form-actions span-all">
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save changes</button>
+        <a class="btn btn-ghost" href="{{ url_for('main.service_history') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="side-stack">
+    <section class="panel panel-danger-zone">
+      <div class="panel-head"><div><h2>Delete record</h2><p>This cannot be undone.</p></div></div>
+      <form method="post" action="{{ url_for('main.service_history_delete', history_id=record.id) }}" data-confirm="Delete this service history record? This cannot be undone.">
+        {{ csrf_field() }}
+        <button class="btn btn-danger btn-block" type="submit">{{ icon('trash', 16) }} Delete record</button>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<datalist id="service-options">
+  {% for service in default_services %}<option value="{{ service }}"></option>{% endfor %}
+</datalist>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, customer_select, field_error %}
+{% block title %}Edit appointment{% endblock %}
+
+{% block content %}
+{% call page_header('Edit appointment', 'Reschedule or update the status of this customer booking.', 'APPOINTMENT #' ~ appointment.id) %}
+  <a class="btn btn-secondary" href="{{ url_for('main.appointments') }}">{{ icon('chevron-left', 16) }} Back to appointments</a>
+{% endcall %}
+
+<div class="form-layout form-layout-narrow">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>{{ appointment.service }}</h2>
+        <p>Created {{ appointment.created_at|pretty_datetime }}</p>
+      </div>
+      {{ status_badge(appointment.status) }}
+    </div>
+    <form method="post" class="form-grid form-grid-2">
+      {{ csrf_field() }}
+      <div class="form-field span-all">
+        <label for="customer_id">Customer <span class="req">*</span></label>
+        {{ customer_select(customers, form.customer_id) }}
+        {{ field_error(errors, 'customer_id') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="service">Service <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('service') else '' }}" id="service" name="service" type="text" maxlength="200" list="service-options" value="{{ form.service }}" required>
+        {{ field_error(errors, 'service') }}
+      </div>
+      <div class="form-field">
+        <label for="appointment_date">Date <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('appointment_date') else '' }}" id="appointment_date" name="appointment_date" type="date" value="{{ form.appointment_date }}" required>
+        {{ field_error(errors, 'appointment_date') }}
+      </div>
+      <div class="form-field">
+        <label for="appointment_time">Time <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('appointment_time') else '' }}" id="appointment_time" name="appointment_time" type="time" value="{{ form.appointment_time }}" required>
+        {{ field_error(errors, 'appointment_time') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="status">Status</label>
+        <select class="input" id="status" name="status">
+          {% for status in status_choices %}<option value="{{ status }}" {% if form.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-actions span-all">
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save changes</button>
+        <a class="btn btn-ghost" href="{{ url_for('main.appointments') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="side-stack">
+    <section class="panel panel-note">
+      <div class="panel-head"><div><h2>Status guide</h2></div></div>
+      <ul class="plain-list">
+        <li><strong>Scheduled</strong><span>Customer is booked and waiting for the service date.</span></li>
+        <li><strong>In Service</strong><span>Vehicle is currently being worked on.</span></li>
+        <li><strong>Completed</strong><span>Service is finished.</span></li>
+        <li><strong>Cancelled</strong><span>Booking will not push through.</span></li>
+      </ul>
+    </section>
+    <section class="panel panel-danger-zone">
+      <div class="panel-head"><div><h2>Delete appointment</h2><p>This cannot be undone.</p></div></div>
+      <form method="post" action="{{ url_for('main.appointment_delete', appointment_id=appointment.id) }}" data-confirm="Delete this appointment? This cannot be undone.">
+        {{ csrf_field() }}
+        <button class="btn btn-danger btn-block" type="submit">{{ icon('trash', 16) }} Delete appointment</button>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<datalist id="service-options">
+  {% for service in default_services %}<option value="{{ service }}"></option>{% endfor %}
+</datalist>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, customer_select, field_error %}
+{% block title %}Edit vehicle {{ vehicle.plate }}{% endblock %}
+
+{% block content %}
+{% call page_header('Edit vehicle', 'Update the vehicle details or move it to another customer.', 'VEHICLE #' ~ vehicle.id) %}
+  <a class="btn btn-secondary" href="{{ url_for('main.vehicles') }}">{{ icon('chevron-left', 16) }} Back to vehicles</a>
+{% endcall %}
+
+<div class="form-layout form-layout-narrow">
+  <section class="panel">
+    <div class="panel-head">
+      <div><h2>{{ vehicle.plate }}</h2><p>{{ vehicle.model or 'Vehicle details' }}</p></div>
+      <span class="avatar avatar-lg">{{ icon('truck', 22) }}</span>
+    </div>
+    <form method="post" class="form-grid form-grid-2">
+      {{ csrf_field() }}
+      <div class="form-field span-all">
+        <label for="customer_id">Customer <span class="req">*</span></label>
+        {{ customer_select(customers, form.customer_id) }}
+        {{ field_error(errors, 'customer_id') }}
+      </div>
+      <div class="form-field">
+        <label for="plate">Plate number <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('plate') else '' }}" id="plate" name="plate" type="text" maxlength="50" value="{{ form.plate }}" required>
+        {{ field_error(errors, 'plate') }}
+      </div>
+      <div class="form-field">
+        <label for="model">Vehicle model</label>
+        <input class="input" id="model" name="model" type="text" maxlength="120" value="{{ form.model }}">
+      </div>
+      <div class="form-field">
+        <label for="technician">Technician</label>
+        <input class="input" id="technician" name="technician" type="text" maxlength="120" value="{{ form.technician }}">
+      </div>
+      <div class="form-field">
+        <label for="status">Status</label>
+        <select class="input" id="status" name="status">
+          {% for status in status_choices %}<option value="{{ status }}" {% if form.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-actions span-all">
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save changes</button>
+        <a class="btn btn-ghost" href="{{ url_for('main.vehicles') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

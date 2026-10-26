@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state, customer_select, delete_button %}
+{% block title %}Appointments{% endblock %}
+
+{% block content %}
+{% call page_header('Appointment Scheduling', 'Book customer services and keep the shop schedule organized.', 'APPOINTMENTS') %}
+  <a class="btn btn-primary" href="#new">{{ icon('plus', 17) }} New appointment</a>
+{% endcall %}
+
+<section class="panel compact-panel" id="new">
+  <div class="panel-head">
+    <div>
+      <h2>Schedule an appointment</h2>
+      <p>Identical bookings for the same customer, service, date, and time are blocked.</p>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('main.appointments') }}" class="form-grid form-grid-5">
+    {{ csrf_field() }}
+    <div class="form-field span-2">
+      <label for="customer_id">Customer <span class="req">*</span></label>
+      {{ customer_select(customers, '') }}
+    </div>
+    <div class="form-field span-2">
+      <label for="service">Service <span class="req">*</span></label>
+      <input class="input" id="service" name="service" type="text" maxlength="200" list="service-options" placeholder="e.g. Wheel alignment" required>
+    </div>
+    <div class="form-field">
+      <label for="appointment_date">Date <span class="req">*</span></label>
+      <input class="input" id="appointment_date" name="appointment_date" type="date" value="{{ today }}" required>
+    </div>
+    <div class="form-field">
+      <label for="appointment_time">Time <span class="req">*</span></label>
+      <input class="input" id="appointment_time" name="appointment_time" type="time" value="09:00" required>
+    </div>
+    <div class="form-actions span-all">
+      <button class="btn btn-primary" type="submit">{{ icon('calendar-check', 16) }} Schedule appointment</button>
+      <span class="form-hint">New appointments start with a “Scheduled” status.</span>
+    </div>
+  </form>
+</section>
+
+<div class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('main.appointments') }}" role="search">
+    <span class="search-icon">{{ icon('search', 17) }}</span>
+    <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search customer, service, date, or status…" aria-label="Search appointments">
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.appointments') }}">Clear</a>{% endif %}
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> appointment{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">matching “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Schedule list</h2><p>Newest dates first.</p></div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if appointments %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th class="col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for appointment in appointments %}
+        <tr>
+          <td class="cell-nowrap">
+            <div class="date-cell">
+              <strong>{{ appointment.appointment_date|pretty_date }}</strong>
+              {% if appointment.appointment_date == today %}<span class="today-chip">Today</span>{% endif %}
+            </div>
+          </td>
+          <td class="cell-nowrap"><span class="time-chip">{{ appointment.appointment_time|pretty_time }}</span></td>
+          <td>
+            {% if appointment.customer %}
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ appointment.customer.name|initials }}</span>
+              <div class="person-copy"><strong>{{ appointment.customer.name }}</strong><small>{{ appointment.customer.plate|dash }}</small></div>
+            </div>
+            {% else %}<span class="cell-muted">Unknown customer</span>{% endif %}
+          </td>
+          <td>{{ appointment.service }}</td>
+          <td>{{ status_badge(appointment.status) }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <a class="icon-btn" href="{{ url_for('main.appointment_edit', appointment_id=appointment.id) }}" title="Edit appointment" aria-label="Edit appointment">{{ icon('edit', 16) }}</a>
+              {{ delete_button(url_for('main.appointment_delete', appointment_id=appointment.id), 'Delete this appointment? This cannot be undone.', 'Delete appointment') }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching appointments', 'Try another customer, service, date, or status.') }}
+  {% else %}
+    {{ empty_state('calendar', 'No appointments scheduled', 'Book the first appointment using the form above.') }}
+  {% endif %}
+</section>
+
+<datalist id="service-options">
+  {% for service in default_services %}<option value="{{ service }}"></option>{% endfor %}
+</datalist>
+{% endblock %}

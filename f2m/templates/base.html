@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#202327">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Dashboard{% endblock %} · F2M Auto-Hub</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{{ 'is-authed' if session.get('auth') else 'is-guest' }}">
+  {% set authed = session.get('auth') %}
+  {% if authed %}
+  <div class="sidebar-backdrop" data-sidebar-close hidden></div>
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="sidebar-brand">
+      <a class="brand-logo" href="{{ url_for('main.dashboard') }}" aria-label="F2M Auto-Hub dashboard">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="F2M Auto-Hub Tires &amp; Mags Trading">
+      </a>
+      <div class="brand-caption">MANAGEMENT SYSTEM</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      {% for group in nav_groups %}
+        {% if group.label %}
+          <div class="nav-label">{{ group.label }}</div>
+        {% else %}
+          <div class="nav-label nav-label-first">WORKSPACE</div>
+        {% endif %}
+        {% for item in group['items'] %}
+          <a class="nav-link{{ ' is-active' if active_nav == item.key else '' }}"
+             href="{{ url_for(item.endpoint) }}"
+             {% if active_nav == item.key %}aria-current="page"{% endif %}>
+            <span class="nav-icon">{{ icon(item.icon, 18) }}</span>
+            <span>{{ item.label }}</span>
+          </a>
+        {% endfor %}
+      {% endfor %}
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <span class="avatar avatar-light">{{ current_user|initials }}</span>
+        <span class="sidebar-user-copy">
+          <strong>{{ current_user }}</strong>
+          <small>Administrator</small>
+        </span>
+      </div>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-sidebar">
+          {{ icon('logout', 16) }} <span>Sign out</span>
+        </button>
+      </form>
+      <div class="sidebar-meta">
+        <span>F2M AUTO-HUB v{{ app_version }}</span>
+        <span>© {{ current_year }}</span>
+      </div>
+    </div>
+  </aside>
+  {% endif %}
+
+  <div class="app-main{{ '' if authed else ' app-main-guest' }}">
+    <header class="topbar">
+      <div class="topbar-left">
+        {% if authed %}
+        <button type="button" class="icon-btn topbar-menu" data-sidebar-toggle aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
+          {{ icon('menu', 20) }}
+        </button>
+        {% else %}
+        <a class="guest-brand" href="{{ url_for('auth.login') }}">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="F2M Auto-Hub">
+        </a>
+        {% endif %}
+        <div class="topbar-context">
+          <span class="topbar-eyebrow">F2M AUTO-HUB · TIRES &amp; MAGS TRADING</span>
+          <span class="topbar-date">{{ today_pretty }}</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        {% if authed %}
+        <span class="online-pill"><span class="online-dot" aria-hidden="true"></span> System online</span>
+        <a class="topbar-profile" href="{{ url_for('main.dashboard') }}" title="Signed in as {{ current_user }}">
+          <span class="avatar avatar-sm">{{ current_user|initials }}</span>
+          <span class="topbar-profile-copy">
+            <strong>{{ current_user }}</strong>
+            <small>Administrator</small>
+          </span>
+        </a>
+        {% else %}
+        <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}">{{ icon('lock', 15) }} Sign in</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="content" id="main-content">
+      {% if authed and is_default_login %}
+      <div class="security-banner">
+        {{ icon('lock', 17) }}
+        <div>
+          <strong>Default administrator password is active.</strong>
+          <span>Set <code>ADMIN_PASSWORD</code> in your hosting environment before going live.</span>
+        </div>
+      </div>
+      {% endif %}
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-stack" aria-live="polite">
+          {% for category, message in messages %}
+          <div class="alert alert-{{ {'success': 'success', 'error': 'danger', 'warning': 'warning', 'info': 'info'}.get(category, 'info') }}" data-flash>
+            <span class="alert-icon">
+              {{ icon('check' if category == 'success' else ('alert' if category in ['error', 'warning'] else 'info'), 18) }}
+            </span>
+            <div class="alert-copy">{{ message }}</div>
+            <button type="button" class="alert-close" data-dismiss aria-label="Dismiss notification">{{ icon('close', 15) }}</button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+
+      <footer class="app-footer">
+        <span>© {{ current_year }} F2M Auto-Hub Tires &amp; Mags Trading · Blgy 1A, Poblacion, Quezon, Bukidnon</span>
+        <span class="app-footer-meta">Customer service &amp; automotive management system</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

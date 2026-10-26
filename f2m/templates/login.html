@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#202327">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sign in · F2M Auto-Hub</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+  <div class="login-shell">
+    <section class="login-brand-panel" aria-label="About F2M Auto-Hub">
+      <div class="login-brand-top">
+        <div class="login-logo-card">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="F2M Auto-Hub Tires &amp; Mags Trading">
+        </div>
+        <p class="login-kicker">Customer Service &amp; Automotive Management</p>
+        <h1>One place for every customer, vehicle, and service.</h1>
+        <p class="login-lede">
+          The F2M Auto-Hub Management System keeps the shop's daily customer
+          records, appointment schedule, service history, and reports organized
+          and easy to review.
+        </p>
+      </div>
+
+      <ul class="login-feature-list">
+        <li>
+          <span class="login-feature-icon">{{ icon('users', 19) }}</span>
+          <span><strong>Customer &amp; vehicle records</strong><small>Searchable profiles and service history</small></span>
+        </li>
+        <li>
+          <span class="login-feature-icon">{{ icon('calendar-check', 19) }}</span>
+          <span><strong>Daily visit tracking</strong><small>Imported Daily Customer Record entries</small></span>
+        </li>
+        <li>
+          <span class="login-feature-icon">{{ icon('chart', 19) }}</span>
+          <span><strong>Daily, weekly &amp; monthly reports</strong><small>Review operations and export to Excel</small></span>
+        </li>
+      </ul>
+
+      <div class="login-brand-footer">
+        <span>Blgy 1A, Poblacion, Quezon, Bukidnon</span>
+        <span>F2M Auto-Hub v{{ app_version }}</span>
+      </div>
+    </section>
+
+    <section class="login-form-panel">
+      <div class="login-form-wrap">
+        <div class="login-mobile-logo">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="F2M Auto-Hub">
+        </div>
+        <div class="eyebrow">ADMINISTRATOR ACCESS</div>
+        <h2>Sign in to continue</h2>
+        <p class="login-form-subtitle">Enter your administrator credentials to open the management dashboard.</p>
+
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+          <span class="alert-icon">{{ icon('alert', 18) }}</span>
+          <div class="alert-copy">{{ error }}</div>
+        </div>
+        {% endif %}
+
+        {% if show_demo_hint %}
+        <div class="alert alert-warning login-hint">
+          <span class="alert-icon">{{ icon('info', 18) }}</span>
+          <div class="alert-copy">
+            <strong>Default login is active.</strong>
+            Use <code>admin</code> / <code>admin123</code>, then change
+            <code>ADMIN_PASSWORD</code> before deploying.
+          </div>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('auth.login') }}" class="login-form" autocomplete="on">
+          {{ csrf_field() }}
+          {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+          <div class="form-field">
+            <label for="username">Username</label>
+            <div class="input-with-icon">
+              {{ icon('user', 17) }}
+              <input class="input" id="username" name="username" type="text" autocomplete="username"
+                     placeholder="Enter your username" required autofocus spellcheck="false">
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="password">Password</label>
+            <div class="input-with-icon input-with-action">
+              {{ icon('lock', 17) }}
+              <input class="input" id="password" name="password" type="password"
+                     autocomplete="current-password" placeholder="Enter your password" required>
+              <button type="button" class="password-toggle" data-password-toggle aria-label="Show password">Show</button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">
+            Sign in {{ icon('arrow-right', 18) }}
+          </button>
+        </form>
+
+        <p class="login-footnote">
+          {{ icon('lock', 14) }} Your session is protected and expires automatically.
+        </p>
+        <p class="login-copyright">© {{ current_year }} F2M Auto-Hub Tires &amp; Mags Trading</p>
+      </div>
+    </section>
+  </div>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</body>
+</html>

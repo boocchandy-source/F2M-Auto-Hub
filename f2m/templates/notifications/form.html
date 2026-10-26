@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, customer_select, field_error %}
+{% block title %}Edit notification{% endblock %}
+
+{% block content %}
+{% call page_header('Edit notification', 'Update the recorded message or move it through the follow-up workflow.', 'NOTIFICATION #' ~ notification.id) %}
+  <a class="btn btn-secondary" href="{{ url_for('main.notifications') }}">{{ icon('chevron-left', 16) }} Back to notifications</a>
+{% endcall %}
+
+<div class="form-layout form-layout-narrow">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Notification details</h2>
+        <p>Logged {{ notification.notification_date|pretty_datetime }}</p>
+      </div>
+      {{ status_badge(notification.status) }}
+    </div>
+    <form method="post" class="form-grid form-grid-2">
+      {{ csrf_field() }}
+      <div class="form-field span-all">
+        <label for="customer_id">Customer <span class="req">*</span></label>
+        {{ customer_select(customers, form.customer_id) }}
+        {{ field_error(errors, 'customer_id') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="message">Message <span class="req">*</span></label>
+        <textarea class="input{{ ' is-invalid' if errors.get('message') else '' }}" id="message" name="message" rows="5" maxlength="2000" required>{{ form.message }}</textarea>
+        {{ field_error(errors, 'message') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="status">Status</label>
+        <select class="input" id="status" name="status">
+          {% for status in status_choices %}<option value="{{ status }}" {% if form.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-actions span-all">
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save changes</button>
+        <a class="btn btn-ghost" href="{{ url_for('main.notifications') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="side-stack">
+    <section class="panel panel-note">
+      <div class="panel-head"><div><h2>Status guide</h2></div></div>
+      <ul class="plain-list">
+        <li><strong>Pending</strong><span>The update still needs to be given or followed up.</span></li>
+        <li><strong>Recorded</strong><span>The message has been logged for the customer.</span></li>
+        <li><strong>Acknowledged</strong><span>The customer has acknowledged the update.</span></li>
+      </ul>
+    </section>
+    <section class="panel panel-danger-zone">
+      <div class="panel-head"><div><h2>Delete notification</h2><p>This cannot be undone.</p></div></div>
+      <form method="post" action="{{ url_for('main.notification_delete', notification_id=notification.id) }}" data-confirm="Delete this notification? This cannot be undone.">
+        {{ csrf_field() }}
+        <button class="btn btn-danger btn-block" type="submit">{{ icon('trash', 16) }} Delete notification</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

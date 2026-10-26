@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, field_error %}
+{% block title %}Edit {{ customer.name }}{% endblock %}
+
+{% block content %}
+{% call page_header('Edit customer', 'Update the customer profile and primary vehicle details.', 'CUSTOMER #' ~ customer.id) %}
+  <a class="btn btn-secondary" href="{{ url_for('main.customers') }}">{{ icon('chevron-left', 16) }} Back to customers</a>
+{% endcall %}
+
+<div class="form-layout">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Customer information</h2>
+        <p>Registered {{ customer.created_at|pretty_datetime }}.</p>
+      </div>
+      <span class="avatar avatar-lg">{{ customer.name|initials }}</span>
+    </div>
+    <form method="post" class="form-grid form-grid-2">
+      {{ csrf_field() }}
+      <div class="form-field span-all">
+        <label for="name">Customer name <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('name') else '' }}" id="name" name="name" type="text" maxlength="200" value="{{ form.name }}" required>
+        {{ field_error(errors, 'name') }}
+      </div>
+      <div class="form-field">
+        <label for="plate">Plate number</label>
+        <input class="input" id="plate" name="plate" type="text" maxlength="50" value="{{ form.plate }}">
+      </div>
+      <div class="form-field">
+        <label for="model">Vehicle model</label>
+        <input class="input" id="model" name="model" type="text" maxlength="120" value="{{ form.model }}">
+      </div>
+      <div class="form-field">
+        <label for="address">Address</label>
+        <input class="input" id="address" name="address" type="text" maxlength="255" value="{{ form.address }}">
+      </div>
+      <div class="form-field">
+        <label for="technician">Technician</label>
+        <input class="input" id="technician" name="technician" type="text" maxlength="120" value="{{ form.technician }}">
+      </div>
+      <div class="form-actions span-all">
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save changes</button>
+        <a class="btn btn-ghost" href="{{ url_for('main.customers') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="side-stack">
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>Related records</h2><p>Connected data for this customer.</p></div>
+      </div>
+      <div class="mini-stat-list">
+        <a class="mini-stat" href="{{ url_for('main.vehicles') }}?q={{ customer.name|urlencode }}">
+          <span class="mini-stat-icon">{{ icon('truck', 18) }}</span>
+          <span><strong>{{ customer.vehicles|length }}</strong><small>Vehicle{{ '' if customer.vehicles|length == 1 else 's' }}</small></span>
+        </a>
+        <a class="mini-stat" href="{{ url_for('main.appointments') }}?q={{ customer.name|urlencode }}">
+          <span class="mini-stat-icon">{{ icon('calendar', 18) }}</span>
+          <span><strong>{{ customer.appointments|length }}</strong><small>Appointment{{ '' if customer.appointments|length == 1 else 's' }}</small></span>
+        </a>
+        <a class="mini-stat" href="{{ url_for('main.service_history') }}?q={{ customer.name|urlencode }}">
+          <span class="mini-stat-icon">{{ icon('history', 18) }}</span>
+          <span><strong>{{ customer.service_history|length }}</strong><small>Service record{{ '' if customer.service_history|length == 1 else 's' }}</small></span>
+        </a>
+        <a class="mini-stat" href="{{ url_for('main.feedback') }}?q={{ customer.name|urlencode }}">
+          <span class="mini-stat-icon">{{ icon('message', 18) }}</span>
+          <span><strong>{{ customer.feedback_concerns|length }}</strong><small>Concern{{ '' if customer.feedback_concerns|length == 1 else 's' }}</small></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="panel panel-danger-zone">
+      <div class="panel-head">
+        <div><h2>Delete customer</h2><p>This also deletes their vehicles, appointments, requests, history, concerns, and notifications.</p></div>
+      </div>
+      <form method="post" action="{{ url_for('main.customer_delete', customer_id=customer.id) }}" data-confirm="Delete {{ customer.name }} and all related records? This cannot be undone.">
+        {{ csrf_field() }}
+        <button class="btn btn-danger btn-block" type="submit">{{ icon('trash', 16) }} Delete this customer</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

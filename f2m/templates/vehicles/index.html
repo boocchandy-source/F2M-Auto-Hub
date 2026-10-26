@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state, customer_select, delete_button %}
+{% block title %}Vehicle Information{% endblock %}
+
+{% block content %}
+{% call page_header('Vehicle Information', 'Keep every vehicle connected to the right customer record.', 'FLEET DIRECTORY') %}
+  <a class="btn btn-primary" href="#new">{{ icon('plus', 17) }} Add vehicle</a>
+{% endcall %}
+
+<section class="panel compact-panel" id="new">
+  <div class="panel-head">
+    <div>
+      <h2>Add a vehicle</h2>
+      <p>Plate numbers must be unique across the shop's records.</p>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('main.vehicles') }}" class="form-grid form-grid-6">
+    {{ csrf_field() }}
+    <div class="form-field span-2">
+      <label for="customer_id">Customer <span class="req">*</span></label>
+      {{ customer_select(customers, '') }}
+    </div>
+    <div class="form-field">
+      <label for="plate">Plate number <span class="req">*</span></label>
+      <input class="input" id="plate" name="plate" type="text" maxlength="50" placeholder="e.g. KCA 2147" required>
+    </div>
+    <div class="form-field">
+      <label for="model">Vehicle model</label>
+      <input class="input" id="model" name="model" type="text" maxlength="120" placeholder="e.g. Toyota Vios">
+    </div>
+    <div class="form-field">
+      <label for="technician">Technician</label>
+      <input class="input" id="technician" name="technician" type="text" maxlength="120" placeholder="Assigned technician">
+    </div>
+    <div class="form-field">
+      <label for="status">Status</label>
+      <select class="input" id="status" name="status">
+        {% for status in status_choices %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-actions span-all">
+      <button class="btn btn-primary" type="submit">{{ icon('plus', 16) }} Add vehicle</button>
+      <span class="form-hint">{{ "{:,}".format(customers|length) }} customer profiles available to link.</span>
+    </div>
+  </form>
+</section>
+
+<div class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('main.vehicles') }}" role="search">
+    <span class="search-icon">{{ icon('search', 17) }}</span>
+    <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search plate, model, technician, status, or customer…" aria-label="Search vehicles">
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.vehicles') }}">Clear</a>{% endif %}
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> vehicle{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">matching “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Vehicle list</h2><p>Newest registrations first.</p></div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if vehicles %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Plate</th>
+          <th>Model</th>
+          <th>Technician</th>
+          <th>Status</th>
+          <th class="col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vehicle in vehicles %}
+        <tr>
+          <td>
+            {% if vehicle.customer %}
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ vehicle.customer.name|initials }}</span>
+              <div class="person-copy">
+                <strong>{{ vehicle.customer.name }}</strong>
+                <small>Customer #{{ vehicle.customer.id }}</small>
+              </div>
+            </div>
+            {% else %}
+            <span class="cell-muted">Unassigned</span>
+            {% endif %}
+          </td>
+          <td><span class="plate-chip">{{ vehicle.plate }}</span></td>
+          <td>{{ vehicle.model|dash }}</td>
+          <td>{{ vehicle.technician|dash }}</td>
+          <td>{{ status_badge(vehicle.status) }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <a class="icon-btn" href="{{ url_for('main.vehicle_edit', vehicle_id=vehicle.id) }}" title="Edit vehicle" aria-label="Edit vehicle {{ vehicle.plate }}">{{ icon('edit', 16) }}</a>
+              {{ delete_button(url_for('main.vehicle_delete', vehicle_id=vehicle.id), 'Delete vehicle ' ~ vehicle.plate ~ '? This cannot be undone.', 'Delete vehicle') }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching vehicles', 'Try another plate number, model, technician, or customer name.') }}
+  {% else %}
+    {{ empty_state('truck', 'No vehicles yet', 'Add a vehicle using the form above to connect it to a customer.') }}
+  {% endif %}
+</section>
+{% endblock %}

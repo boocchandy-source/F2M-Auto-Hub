@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · {{ title }}{% endblock %}
+
+{% block content %}
+<section class="error-page">
+  <div class="error-code">{{ code }}</div>
+  <span class="error-icon">{{ icon('alert', 30) if code|int >= 500 else icon('search', 30) }}</span>
+  <h1>{{ title }}</h1>
+  <p>{{ message }}</p>
+  <div class="error-actions">
+    {% if signed_in|default(session.get('auth')) %}
+    <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">{{ icon('dashboard', 16) }} Back to dashboard</a>
+    {% else %}
+    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">{{ icon('lock', 16) }} Go to sign in</a>
+    {% endif %}
+    <button class="btn btn-secondary" type="button" data-back>{{ icon('chevron-left', 16) }} Go back</button>
+  </div>
+</section>
+{% endblock %}

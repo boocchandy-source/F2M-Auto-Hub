@@ -1,0 +1,23 @@
+# Python / Flask
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local data and secrets
+instance/
+f2m/data/
+*.db
+*.sqlite3
+.env
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state, customer_select, delete_button %}
+{% block title %}Service History{% endblock %}
+
+{% block content %}
+{% call page_header('Service History', 'Keep a permanent record of completed and previous services for every customer.', 'SERVICE MANAGEMENT') %}
+  <a class="btn btn-primary" href="#new">{{ icon('plus', 17) }} Add history record</a>
+{% endcall %}
+
+<section class="panel compact-panel" id="new">
+  <div class="panel-head">
+    <div>
+      <h2>Add a service history record</h2>
+      <p>Use this for walk-in or past services that were not logged as a request.</p>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('main.service_history') }}" class="form-grid form-grid-4">
+    {{ csrf_field() }}
+    <div class="form-field span-2">
+      <label for="customer_id">Customer <span class="req">*</span></label>
+      {{ customer_select(customers, '') }}
+    </div>
+    <div class="form-field span-2">
+      <label for="service">Service <span class="req">*</span></label>
+      <input class="input" id="service" name="service" type="text" maxlength="200" list="service-options" placeholder="e.g. Oil change" required>
+    </div>
+    <div class="form-field">
+      <label for="service_date">Service date <span class="req">*</span></label>
+      <input class="input" id="service_date" name="service_date" type="date" value="{{ today }}" required>
+    </div>
+    <div class="form-field">
+      <label for="technician">Technician</label>
+      <input class="input" id="technician" name="technician" type="text" maxlength="120" placeholder="Assigned technician">
+    </div>
+    <div class="form-field span-2">
+      <label for="notes">Notes</label>
+      <input class="input" id="notes" name="notes" type="text" maxlength="2000" placeholder="Short note about the service">
+    </div>
+    <div class="form-actions span-all">
+      <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save history record</button>
+      <span class="form-hint">New records are saved with a “Completed” status.</span>
+    </div>
+  </form>
+</section>
+
+<div class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('main.service_history') }}" role="search">
+    <span class="search-icon">{{ icon('search', 17) }}</span>
+    <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search customer, service, technician, status, or notes…" aria-label="Search service history">
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.service_history') }}">Clear</a>{% endif %}
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> record{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">matching “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Service records</h2><p>Most recent service dates first.</p></div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if history %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Technician</th>
+          <th>Status</th>
+          <th>Notes</th>
+          <th class="col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in history %}
+        <tr>
+          <td class="cell-nowrap cell-muted">{{ record.service_date|pretty_date }}</td>
+          <td>
+            {% if record.customer %}
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ record.customer.name|initials }}</span>
+              <div class="person-copy"><strong>{{ record.customer.name }}</strong><small>{{ record.customer.plate|dash }}</small></div>
+            </div>
+            {% else %}<span class="cell-muted">Unknown customer</span>{% endif %}
+          </td>
+          <td><strong class="cell-strong">{{ record.service }}</strong></td>
+          <td class="cell-nowrap">{{ record.technician|dash }}</td>
+          <td>{{ status_badge(record.status) }}</td>
+          <td class="cell-wrap cell-muted">{{ record.notes|truncate(70, true) if record.notes else '—' }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <a class="icon-btn" href="{{ url_for('main.service_history_edit', history_id=record.id) }}" title="Edit record" aria-label="Edit service history record">{{ icon('edit', 16) }}</a>
+              {{ delete_button(url_for('main.service_history_delete', history_id=record.id), 'Delete this service history record? This cannot be undone.', 'Delete record') }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching service records', 'Try another customer, service, technician, status, or note.') }}
+  {% else %}
+    {{ empty_state('history', 'No service history yet', 'Add a record above or mark a service request as completed.') }}
+  {% endif %}
+</section>
+
+<datalist id="service-options">
+  {% for service in default_services %}<option value="{{ service }}"></option>{% endfor %}
+</datalist>
+{% endblock %}

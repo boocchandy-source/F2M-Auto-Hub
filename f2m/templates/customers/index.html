@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state, delete_button %}
+{% block title %}Customer Records{% endblock %}
+
+{% block content %}
+{% call page_header('Customer Records', 'Register customers and keep their contact and vehicle details in one searchable directory.', 'CUSTOMER DIRECTORY') %}
+  <a class="btn btn-primary" href="#new">{{ icon('plus', 17) }} New customer</a>
+{% endcall %}
+
+<section class="panel compact-panel" id="new">
+  <div class="panel-head">
+    <div>
+      <h2>Add a customer</h2>
+      <p>A vehicle record is created automatically when a plate or model is provided.</p>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('main.customers') }}" class="form-grid form-grid-5">
+    {{ csrf_field() }}
+    {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+    <div class="form-field">
+      <label for="name">Customer name <span class="req">*</span></label>
+      <input class="input" id="name" name="name" type="text" maxlength="200" placeholder="Full name" required>
+    </div>
+    <div class="form-field">
+      <label for="plate">Plate number</label>
+      <input class="input" id="plate" name="plate" type="text" maxlength="50" placeholder="e.g. KCA 2147">
+    </div>
+    <div class="form-field">
+      <label for="model">Vehicle model</label>
+      <input class="input" id="model" name="model" type="text" maxlength="120" placeholder="e.g. Toyota Vios">
+    </div>
+    <div class="form-field">
+      <label for="address">Address</label>
+      <input class="input" id="address" name="address" type="text" maxlength="255" placeholder="City / municipality">
+    </div>
+    <div class="form-field">
+      <label for="technician">Technician</label>
+      <input class="input" id="technician" name="technician" type="text" maxlength="120" placeholder="Assigned technician">
+    </div>
+    <div class="form-actions span-all">
+      <button class="btn btn-primary" type="submit">{{ icon('plus', 16) }} Add customer</button>
+      <span class="form-hint">Name is required. Duplicate name + plate combinations are blocked.</span>
+    </div>
+  </form>
+</section>
+
+<div class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('main.customers') }}" role="search">
+    <span class="search-icon">{{ icon('search', 17) }}</span>
+    <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search name, plate, model, address, or technician…" aria-label="Search customer records">
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.customers') }}">Clear</a>{% endif %}
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> record{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">matching “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>Customer list</h2>
+      <p>Sorted by most recently added.</p>
+    </div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if customers %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Plate</th>
+          <th>Vehicle model</th>
+          <th>Address</th>
+          <th>Technician</th>
+          <th>Registered</th>
+          <th class="col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for customer in customers %}
+        <tr>
+          <td>
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ customer.name|initials }}</span>
+              <div class="person-copy">
+                <strong>{{ customer.name }}</strong>
+                <small>Customer #{{ customer.id }}</small>
+              </div>
+            </div>
+          </td>
+          <td class="cell-nowrap">{{ customer.plate|dash }}</td>
+          <td>{{ customer.model|dash }}</td>
+          <td class="cell-wrap">{{ customer.address|dash }}</td>
+          <td class="cell-nowrap">{{ customer.technician|dash }}</td>
+          <td class="cell-nowrap cell-muted">{{ customer.created_at|pretty_date }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <a class="icon-btn" href="{{ url_for('main.customer_edit', customer_id=customer.id) }}" title="Edit {{ customer.name }}" aria-label="Edit {{ customer.name }}">{{ icon('edit', 16) }}</a>
+              {{ delete_button(url_for('main.customer_delete', customer_id=customer.id), 'Delete ' ~ customer.name ~ ' and all related records? This cannot be undone.', 'Delete customer') }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching customers', 'Try a different name, plate number, model, address, or technician.') }}
+  {% else %}
+    {{ empty_state('users', 'No customers yet', 'Add the first customer using the form above.') }}
+  {% endif %}
+</section>
+{% endblock %}

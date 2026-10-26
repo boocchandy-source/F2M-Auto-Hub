@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state, customer_select, delete_button %}
+{% block title %}Service Requests{% endblock %}
+
+{% block content %}
+{% call page_header('Service Requests', 'Record requested work and track each job until it is completed.', 'SERVICE MANAGEMENT') %}
+  <a class="btn btn-primary" href="#new">{{ icon('plus', 17) }} New request</a>
+{% endcall %}
+
+<section class="panel compact-panel" id="new">
+  <div class="panel-head">
+    <div>
+      <h2>Log a service request</h2>
+      <p>Completed requests automatically create a service history entry.</p>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('main.service_requests') }}" class="form-grid form-grid-4">
+    {{ csrf_field() }}
+    <div class="form-field span-2">
+      <label for="customer_id">Customer <span class="req">*</span></label>
+      {{ customer_select(customers, '') }}
+    </div>
+    <div class="form-field span-2">
+      <label for="service">Service requested <span class="req">*</span></label>
+      <input class="input" id="service" name="service" type="text" maxlength="200" list="service-options" placeholder="e.g. Tire replacement" required>
+    </div>
+    <div class="form-field">
+      <label for="request_date">Request date <span class="req">*</span></label>
+      <input class="input" id="request_date" name="request_date" type="date" value="{{ today }}" required>
+    </div>
+    <div class="form-field">
+      <label for="status">Status</label>
+      <select class="input" id="status" name="status">
+        {% for status in status_choices %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-field span-2">
+      <label for="technician">Technician</label>
+      <input class="input" id="technician" name="technician" type="text" maxlength="120" placeholder="Assigned technician">
+    </div>
+    <div class="form-field span-all">
+      <label for="notes">Notes</label>
+      <textarea class="input" id="notes" name="notes" rows="2" maxlength="2000" placeholder="Extra details about the request…"></textarea>
+    </div>
+    <div class="form-actions span-all">
+      <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save request</button>
+      <span class="form-hint">Date defaults to today in Asia/Manila time.</span>
+    </div>
+  </form>
+</section>
+
+<div class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('main.service_requests') }}" role="search">
+    <span class="search-icon">{{ icon('search', 17) }}</span>
+    <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search customer, service, status, technician, or notes…" aria-label="Search service requests">
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.service_requests') }}">Clear</a>{% endif %}
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> request{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">matching “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Request queue</h2><p>Newest requests first.</p></div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if requests %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Technician</th>
+          <th>Notes</th>
+          <th class="col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for request in requests %}
+        <tr>
+          <td class="cell-nowrap cell-muted">{{ request.request_date|pretty_date }}</td>
+          <td>
+            {% if request.customer %}
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ request.customer.name|initials }}</span>
+              <div class="person-copy"><strong>{{ request.customer.name }}</strong><small>{{ request.customer.plate|dash }}</small></div>
+            </div>
+            {% else %}<span class="cell-muted">Unknown customer</span>{% endif %}
+          </td>
+          <td><strong class="cell-strong">{{ request.service }}</strong></td>
+          <td>{{ status_badge(request.status) }}</td>
+          <td class="cell-nowrap">{{ request.technician|dash }}</td>
+          <td class="cell-wrap cell-muted">{{ request.notes|truncate(70, true) if request.notes else '—' }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <a class="icon-btn" href="{{ url_for('main.service_request_edit', request_id=request.id) }}" title="Edit request" aria-label="Edit request">{{ icon('edit', 16) }}</a>
+              {{ delete_button(url_for('main.service_request_delete', request_id=request.id), 'Delete this service request? This cannot be undone.', 'Delete request') }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching requests', 'Try another customer, service, status, or technician.') }}
+  {% else %}
+    {{ empty_state('clipboard', 'No service requests yet', 'Log the first request using the form above.') }}
+  {% endif %}
+</section>
+
+<datalist id="service-options">
+  {% for service in default_services %}<option value="{{ service }}"></option>{% endfor %}
+</datalist>
+{% endblock %}

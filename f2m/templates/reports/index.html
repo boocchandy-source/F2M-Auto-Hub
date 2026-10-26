@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, empty_state %}
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+{% call page_header('Reports', 'Review daily, weekly, or monthly operations and export a formatted Excel workbook.', 'REPORTING') %}
+  <a class="btn btn-secondary" href="{{ export_url }}">{{ icon('download', 17) }} Export Excel</a>
+  <button class="btn btn-ghost" type="button" data-print>{{ icon('print', 17) }} Print</button>
+{% endcall %}
+
+<section class="panel report-filter-panel">
+  <div class="panel-head">
+    <div>
+      <h2>Report period</h2>
+      <p>Choose a report type and a reference date. Weeks start on Monday.</p>
+    </div>
+  </div>
+  <form method="get" action="{{ url_for('main.reports') }}" class="report-filter">
+    <div class="form-field">
+      <label>Report type</label>
+      <div class="segmented" role="group" aria-label="Report type">
+        {% for kind in ['Daily', 'Weekly', 'Monthly'] %}
+        <label class="segment">
+          <input type="radio" name="type" value="{{ kind }}" {% if report_type == kind %}checked{% endif %}>
+          <span>{{ kind }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="form-field">
+      <label for="date">Reference date</label>
+      <input class="input" id="date" name="date" type="date" value="{{ reference_text }}" required>
+    </div>
+    <button class="btn btn-primary" type="submit">{{ icon('chart', 16) }} Generate report</button>
+    <a class="btn btn-secondary" href="{{ export_url }}">{{ icon('download', 16) }} Download .xlsx</a>
+  </form>
+</section>
+
+<section class="report-banner">
+  <div>
+    <span class="eyebrow">{{ report_type|upper }} REPORT</span>
+    <h2>{{ period_label }}</h2>
+    <p>
+      {% if report_type == 'Daily' %}
+        Operations recorded for {{ start|pretty_date }}.
+      {% elif report_type == 'Weekly' %}
+        Operations recorded for the week of {{ start|pretty_date }} to {{ end|pretty_date }}.
+      {% else %}
+        Operations recorded for {{ start.strftime('%B %Y') }}.
+      {% endif %}
+    </p>
+  </div>
+  <div class="report-banner-meta">
+    <span class="report-badge">{{ icon('calendar', 15) }} {{ report_type }}</span>
+    <span class="report-badge">{{ icon('download', 15) }} Excel ready</span>
+  </div>
+</section>
+
+<section class="report-stats" aria-label="Report totals">
+  <div class="report-stat"><span class="report-stat-icon tone-red">{{ icon('calendar-check', 19) }}</span><span><strong>{{ "{:,}".format(counts.visits) }}</strong><small>Daily visits</small></span></div>
+  <div class="report-stat"><span class="report-stat-icon tone-ink">{{ icon('users', 19) }}</span><span><strong>{{ "{:,}".format(counts.customers) }}</strong><small>Customer records</small></span></div>
+  <div class="report-stat"><span class="report-stat-icon tone-blue">{{ icon('calendar', 19) }}</span><span><strong>{{ "{:,}".format(counts.appointments) }}</strong><small>Appointments</small></span></div>
+  <div class="report-stat"><span class="report-stat-icon tone-amber">{{ icon('clipboard', 19) }}</span><span><strong>{{ "{:,}".format(counts.requests) }}</strong><small>Service requests</small></span></div>
+  <div class="report-stat"><span class="report-stat-icon tone-green">{{ icon('history', 19) }}</span><span><strong>{{ "{:,}".format(counts.history) }}</strong><small>Service history</small></span></div>
+  <div class="report-stat"><span class="report-stat-icon tone-muted">{{ icon('message', 19) }}</span><span><strong>{{ "{:,}".format(counts.concerns) }}</strong><small>Concerns</small></span></div>
+  <div class="report-stat"><span class="report-stat-icon tone-muted">{{ icon('bell', 19) }}</span><span><strong>{{ "{:,}".format(counts.notifications) }}</strong><small>Notifications</small></span></div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>Daily customer records</h2>
+      <p>Visit rows inside the selected period.</p>
+    </div>
+    <span class="panel-counter">{{ "{:,}".format(counts.visits) }} row{{ '' if counts.visits == 1 else 's' }}</span>
+  </div>
+  {% if visits %}
+    {% for day, rows in visits|groupby('visit_date') %}
+    <div class="report-day">
+      <div class="report-day-head">
+        <h3>{{ day|pretty_date }}</h3>
+        <span>{{ rows|length }} visit{{ '' if rows|length == 1 else 's' }}</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table report-table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>Plate</th>
+              <th>Model</th>
+              <th>Customer name</th>
+              <th>Address</th>
+              <th>Technician</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for visit in rows %}
+            <tr>
+              <td class="cell-nowrap"><span class="record-no">{{ visit.record_no }}</span></td>
+              <td class="cell-nowrap"><span class="plate-chip">{{ visit.plate|dash }}</span></td>
+              <td>{{ visit.model|dash }}</td>
+              <td>{{ visit.customer_name }}</td>
+              <td class="cell-wrap cell-muted">{{ visit.address|dash }}</td>
+              <td class="cell-nowrap">{{ visit.technician|dash }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    {{ empty_state('chart', 'No visit records in this period', 'Choose another report date, or log services and appointments for this period first.') }}
+  {% endif %}
+</section>
+
+<section class="panel export-note">
+  <div class="export-note-icon">{{ icon('download', 24) }}</div>
+  <div>
+    <h2>What the Excel export includes</h2>
+    <p>
+      The workbook contains a summary sheet, a Daily Customer Record sheet for each date in the period,
+      and separate sheets for customer records, appointments, service requests, service history,
+      feedback, and notifications. The filename includes the report type and date range.
+    </p>
+  </div>
+  <a class="btn btn-primary" href="{{ export_url }}">{{ icon('download', 16) }} Export now</a>
+</section>
+{% endblock %}

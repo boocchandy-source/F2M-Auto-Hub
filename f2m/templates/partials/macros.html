@@ -1,0 +1,81 @@
+{% macro page_header(title, subtitle='', eyebrow='') -%}
+<div class="page-head">
+  <div class="page-head-copy">
+    {% if eyebrow %}<div class="eyebrow">{{ eyebrow }}</div>{% endif %}
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<p>{{ subtitle }}</p>{% endif %}
+  </div>
+  <div class="page-head-actions">
+    {{ caller() }}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro render_pagination(p) -%}
+  {% if p.total %}
+    <div class="pagination-summary">
+      Showing <strong>{{ p.first }}–{{ p.last }}</strong> of <strong>{{ p.total }}</strong> record{{ '' if p.total == 1 else 's' }}
+    </div>
+  {% endif %}
+  {% if p.pages > 1 %}
+  <nav class="pagination" aria-label="Pagination">
+    {% if p.has_prev %}
+      <a class="page-btn page-arrow" href="{{ page_url(p.prev_num) }}" aria-label="Previous page">{{ icon('chevron-left', 16) }}</a>
+    {% else %}
+      <span class="page-btn page-arrow is-disabled" aria-hidden="true">{{ icon('chevron-left', 16) }}</span>
+    {% endif %}
+    {% set window_start = [1, p.page - 2]|max %}
+    {% set window_end = [p.pages, p.page + 2]|min %}
+    {% if window_start > 1 %}
+      <a class="page-btn" href="{{ page_url(1) }}">1</a>
+      {% if window_start > 2 %}<span class="page-gap">…</span>{% endif %}
+    {% endif %}
+    {% for number in range(window_start, window_end + 1) %}
+      {% if number == p.page %}
+        <span class="page-btn is-current" aria-current="page">{{ number }}</span>
+      {% else %}
+        <a class="page-btn" href="{{ page_url(number) }}">{{ number }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if window_end < p.pages %}
+      {% if window_end < p.pages - 1 %}<span class="page-gap">…</span>{% endif %}
+      <a class="page-btn" href="{{ page_url(p.pages) }}">{{ p.pages }}</a>
+    {% endif %}
+    {% if p.has_next %}
+      <a class="page-btn page-arrow" href="{{ page_url(p.next_num) }}" aria-label="Next page">{{ icon('chevron-right', 16) }}</a>
+    {% else %}
+      <span class="page-btn page-arrow is-disabled" aria-hidden="true">{{ icon('chevron-right', 16) }}</span>
+    {% endif %}
+  </nav>
+  {% endif %}
+{%- endmacro %}
+
+{% macro empty_state(icon_name, title, text) -%}
+<div class="empty-state">
+  <span class="empty-icon">{{ icon(icon_name, 26) }}</span>
+  <h3>{{ title }}</h3>
+  <p>{{ text }}</p>
+</div>
+{%- endmacro %}
+
+{% macro field_error(errors, name) -%}
+  {% if errors and errors.get(name) %}<p class="field-error">{{ errors.get(name) }}</p>{% endif %}
+{%- endmacro %}
+
+{% macro delete_button(action, message, label='Delete') -%}
+<form class="inline-form" method="post" action="{{ action }}" data-confirm="{{ message }}">
+  {{ csrf_field() }}
+  <button type="submit" class="icon-btn icon-btn-danger" title="{{ label }}" aria-label="{{ label }}">{{ icon('trash', 16) }}</button>
+</form>
+{%- endmacro %}
+
+{% macro customer_select(customers, selected, name='customer_id', required=True) -%}
+<select name="{{ name }}" id="{{ name }}" class="input" {% if required %}required{% endif %}>
+  <option value="">Select a customer…</option>
+  {% for c in customers %}
+    <option value="{{ c.id }}" {% if selected|string == c.id|string %}selected{% endif %}>
+      {{ c.name }}{% if c.plate %} — {{ c.plate }}{% endif %}
+    </option>
+  {% endfor %}
+</select>
+{%- endmacro %}

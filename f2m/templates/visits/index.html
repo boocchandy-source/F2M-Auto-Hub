@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state %}
+{% block title %}Daily Visits{% endblock %}
+
+{% block content %}
+{% call page_header('Daily Customer Record', 'Browse the daily customer records imported from the shop workbook.', 'DAILY VISITS') %}
+  <a class="btn btn-primary" href="{{ url_for('main.reports', type='Daily', date=selected_date) }}">{{ icon('chart', 17) }} Open daily report</a>
+{% endcall %}
+
+<div class="visits-summary">
+  <div class="visit-stat">
+    <span class="visit-stat-icon">{{ icon('calendar-check', 19) }}</span>
+    <span><strong>{{ "{:,}".format(total_visits) }}</strong><small>Visits on {{ selected_date|pretty_date }}</small></span>
+  </div>
+  <div class="visit-stat">
+    <span class="visit-stat-icon">{{ icon('users', 19) }}</span>
+    <span><strong>{{ "{:,}".format(unique_customers) }}</strong><small>Unique customers</small></span>
+  </div>
+  <div class="visit-stat">
+    <span class="visit-stat-icon">{{ icon('truck', 19) }}</span>
+    <span><strong>{{ "{:,}".format(unique_plates) }}</strong><small>Unique plate numbers</small></span>
+  </div>
+</div>
+
+<div class="toolbar toolbar-wrap">
+  <form class="visit-filter-form" method="get" action="{{ url_for('main.visits') }}">
+    <div class="visit-filter-field">
+      <label for="date">Record date</label>
+      <select class="input" id="date" name="date" data-autosubmit>
+        {% if dates %}
+          {% for day in dates %}
+          <option value="{{ day }}" {% if day == selected_date %}selected{% endif %}>{{ day|pretty_date }}</option>
+          {% endfor %}
+        {% else %}
+          <option value="{{ selected_date }}">{{ selected_date|pretty_date }}</option>
+        {% endif %}
+      </select>
+    </div>
+    <div class="search-form visit-search">
+      <span class="search-icon">{{ icon('search', 17) }}</span>
+      <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search name, plate, model, address, technician, or record no.…" aria-label="Search daily visits">
+      <button class="btn btn-secondary" type="submit">Search</button>
+      {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.visits', date=selected_date) }}">Clear</a>{% endif %}
+    </div>
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> matching row{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">for “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>{{ selected_date|pretty_date }}</h2>
+      <p>Daily Customer Record · {{ "{:,}".format(pagination.total) }} row{{ '' if pagination.total == 1 else 's' }} displayed</p>
+    </div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if visits %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Plate</th>
+          <th>Model</th>
+          <th>Customer name</th>
+          <th>Address</th>
+          <th>Technician</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for visit in visits %}
+        <tr>
+          <td class="cell-nowrap"><span class="record-no">{{ visit.record_no }}</span></td>
+          <td class="cell-nowrap"><span class="plate-chip">{{ visit.plate|dash }}</span></td>
+          <td>{{ visit.model|dash }}</td>
+          <td>
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ visit.customer_name|initials }}</span>
+              <strong>{{ visit.customer_name }}</strong>
+            </div>
+          </td>
+          <td class="cell-wrap cell-muted">{{ visit.address|dash }}</td>
+          <td class="cell-nowrap">{{ visit.technician|dash }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching visits', 'Try another name, plate number, model, address, technician, or record number.') }}
+  {% else %}
+    {{ empty_state('calendar-check', 'No records for this date', 'Choose another date from the record selector above.') }}
+  {% endif %}
+</section>
+
+<p class="page-footnote">{{ icon('info', 14) }} These records come from the company Daily Customer Record workbook and are imported once when the system is first set up.</p>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state, customer_select, delete_button %}
+{% block title %}Feedback &amp; Concerns{% endblock %}
+
+{% block content %}
+{% call page_header('Feedback / Concern', 'Record customer concerns and follow each one through to resolution.', 'CUSTOMER CARE') %}
+  <a class="btn btn-primary" href="#new">{{ icon('plus', 17) }} New concern</a>
+{% endcall %}
+
+<section class="panel compact-panel" id="new">
+  <div class="panel-head">
+    <div>
+      <h2>Log a customer concern</h2>
+      <p>New feedback is saved with a “Pending” status for follow-up.</p>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('main.feedback') }}" class="form-grid form-grid-3">
+    {{ csrf_field() }}
+    <div class="form-field">
+      <label for="customer_id">Customer <span class="req">*</span></label>
+      {{ customer_select(customers, '') }}
+    </div>
+    <div class="form-field span-2">
+      <label for="concern">Feedback / concern <span class="req">*</span></label>
+      <textarea class="input" id="concern" name="concern" rows="2" maxlength="2000" placeholder="What did the customer raise?" required></textarea>
+    </div>
+    <div class="form-actions span-all">
+      <button class="btn btn-primary" type="submit">{{ icon('message', 16) }} Save concern</button>
+    </div>
+  </form>
+</section>
+
+<div class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('main.feedback') }}" role="search">
+    <span class="search-icon">{{ icon('search', 17) }}</span>
+    <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search customer, concern, or status…" aria-label="Search concerns">
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.feedback') }}">Clear</a>{% endif %}
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> concern{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">matching “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Concern log</h2><p>Newest concerns first.</p></div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if concerns %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Feedback / concern</th>
+          <th>Status</th>
+          <th>Logged</th>
+          <th class="col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for concern in concerns %}
+        <tr>
+          <td>
+            {% if concern.customer %}
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ concern.customer.name|initials }}</span>
+              <div class="person-copy"><strong>{{ concern.customer.name }}</strong><small>{{ concern.customer.plate|dash }}</small></div>
+            </div>
+            {% else %}<span class="cell-muted">Unknown customer</span>{% endif %}
+          </td>
+          <td class="cell-wrap concern-cell">{{ concern.concern }}</td>
+          <td>{{ status_badge(concern.status) }}</td>
+          <td class="cell-nowrap cell-muted">{{ concern.created_at|pretty_datetime }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <a class="icon-btn" href="{{ url_for('main.feedback_edit', concern_id=concern.id) }}" title="Edit concern" aria-label="Edit concern">{{ icon('edit', 16) }}</a>
+              {{ delete_button(url_for('main.feedback_delete', concern_id=concern.id), 'Delete this concern? This cannot be undone.', 'Delete concern') }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching concerns', 'Try another customer name, concern text, or status.') }}
+  {% else %}
+    {{ empty_state('message', 'No concerns logged', 'Customer feedback will appear here once it is recorded.') }}
+  {% endif %}
+</section>
+{% endblock %}

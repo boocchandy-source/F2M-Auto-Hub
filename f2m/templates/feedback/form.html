@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, customer_select, field_error %}
+{% block title %}Edit concern{% endblock %}
+
+{% block content %}
+{% call page_header('Edit feedback / concern', 'Update the concern details or mark it as resolved.', 'CONCERN #' ~ concern.id) %}
+  <a class="btn btn-secondary" href="{{ url_for('main.feedback') }}">{{ icon('chevron-left', 16) }} Back to concerns</a>
+{% endcall %}
+
+<div class="form-layout form-layout-narrow">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Concern details</h2>
+        <p>Logged {{ concern.created_at|pretty_datetime }}</p>
+      </div>
+      {{ status_badge(concern.status) }}
+    </div>
+    <form method="post" class="form-grid form-grid-2">
+      {{ csrf_field() }}
+      <div class="form-field span-all">
+        <label for="customer_id">Customer <span class="req">*</span></label>
+        {{ customer_select(customers, form.customer_id) }}
+        {{ field_error(errors, 'customer_id') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="concern">Feedback / concern <span class="req">*</span></label>
+        <textarea class="input{{ ' is-invalid' if errors.get('concern') else '' }}" id="concern" name="concern" rows="5" maxlength="2000" required>{{ form.concern }}</textarea>
+        {{ field_error(errors, 'concern') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="status">Status</label>
+        <select class="input" id="status" name="status">
+          {% for status in status_choices %}<option value="{{ status }}" {% if form.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-actions span-all">
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save changes</button>
+        <a class="btn btn-ghost" href="{{ url_for('main.feedback') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="side-stack">
+    <section class="panel panel-note">
+      <div class="panel-head"><div><h2>Status guide</h2></div></div>
+      <ul class="plain-list">
+        <li><strong>Pending</strong><span>Concern is newly logged and not yet handled.</span></li>
+        <li><strong>In Progress</strong><span>Staff are already working on the concern.</span></li>
+        <li><strong>Resolved</strong><span>The concern has been addressed.</span></li>
+      </ul>
+    </section>
+    <section class="panel panel-danger-zone">
+      <div class="panel-head"><div><h2>Delete concern</h2><p>This cannot be undone.</p></div></div>
+      <form method="post" action="{{ url_for('main.feedback_delete', concern_id=concern.id) }}" data-confirm="Delete this concern? This cannot be undone.">
+        {{ csrf_field() }}
+        <button class="btn btn-danger btn-block" type="submit">{{ icon('trash', 16) }} Delete concern</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, render_pagination, empty_state, customer_select, delete_button %}
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+{% call page_header('Notifications', 'Log customer updates and keep track of messages that still need attention.', 'CUSTOMER CARE') %}
+  <a class="btn btn-primary" href="#new">{{ icon('plus', 17) }} Log notification</a>
+{% endcall %}
+
+<section class="panel compact-panel" id="new">
+  <div class="panel-head">
+    <div>
+      <h2>Log a customer notification</h2>
+      <p>This is an internal record of the update given to the customer.</p>
+    </div>
+  </div>
+  <form method="post" action="{{ url_for('main.notifications') }}" class="form-grid form-grid-3">
+    {{ csrf_field() }}
+    <div class="form-field">
+      <label for="customer_id">Customer <span class="req">*</span></label>
+      {{ customer_select(customers, '') }}
+    </div>
+    <div class="form-field span-2">
+      <label for="message">Message <span class="req">*</span></label>
+      <textarea class="input" id="message" name="message" rows="2" maxlength="2000" placeholder="What update should be recorded?" required></textarea>
+    </div>
+    <div class="form-actions span-all">
+      <button class="btn btn-primary" type="submit">{{ icon('bell', 16) }} Save notification</button>
+    </div>
+  </form>
+</section>
+
+<div class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('main.notifications') }}" role="search">
+    <span class="search-icon">{{ icon('search', 17) }}</span>
+    <input class="input search-input" type="search" name="q" value="{{ q }}" placeholder="Search customer, message, or status…" aria-label="Search notifications">
+    <button class="btn btn-secondary" type="submit">Search</button>
+    {% if q %}<a class="btn btn-ghost" href="{{ url_for('main.notifications') }}">Clear</a>{% endif %}
+  </form>
+  <div class="toolbar-meta">
+    <strong>{{ "{:,}".format(pagination.total) }}</strong> notification{{ '' if pagination.total == 1 else 's' }}
+    {% if q %}<span class="toolbar-filter">matching “{{ q }}”</span>{% endif %}
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div><h2>Notification log</h2><p>Newest messages first.</p></div>
+    <span class="panel-counter">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+  </div>
+  {% if notifications %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Message</th>
+          <th>Status</th>
+          <th>Logged</th>
+          <th class="col-actions"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for notification in notifications %}
+        <tr>
+          <td>
+            {% if notification.customer %}
+            <div class="person-cell">
+              <span class="avatar avatar-xs">{{ notification.customer.name|initials }}</span>
+              <div class="person-copy"><strong>{{ notification.customer.name }}</strong><small>{{ notification.customer.plate|dash }}</small></div>
+            </div>
+            {% else %}<span class="cell-muted">Unknown customer</span>{% endif %}
+          </td>
+          <td class="cell-wrap">{{ notification.message }}</td>
+          <td>{{ status_badge(notification.status) }}</td>
+          <td class="cell-nowrap cell-muted">{{ notification.notification_date|pretty_datetime }}</td>
+          <td class="col-actions">
+            <div class="row-actions">
+              <a class="icon-btn" href="{{ url_for('main.notification_edit', notification_id=notification.id) }}" title="Edit notification" aria-label="Edit notification">{{ icon('edit', 16) }}</a>
+              {{ delete_button(url_for('main.notification_delete', notification_id=notification.id), 'Delete this notification? This cannot be undone.', 'Delete notification') }}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ render_pagination(pagination) }}
+  {% elif q %}
+    {{ empty_state('search', 'No matching notifications', 'Try another customer name, message, or status.') }}
+  {% else %}
+    {{ empty_state('bell', 'No notifications logged', 'Customer updates will appear here once recorded.') }}
+  {% endif %}
+</section>
+{% endblock %}

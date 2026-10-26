@@ -1,0 +1,57 @@
+# F2M Auto-Hub — Render Blueprint (free demo / small deployment)
+#
+# This Blueprint creates:
+#   1. A free Python web service running the Flask app with Gunicorn.
+#   2. A free Render Postgres database.
+#
+# IMPORTANT:
+#   - Render's free Postgres databases expire 30 days after creation. For a
+#     long-lived deployment, upgrade the database plan below to a paid plan,
+#     point DATABASE_URL at a free Neon/Supabase database, or use the
+#     render.disk.yaml Blueprint instead (paid web service + persistent disk).
+#   - Free web services spin down after 15 minutes of inactivity. The first
+#     request after that can take 30–60 seconds.
+#   - Set a strong ADMIN_PASSWORD when Render prompts for it.
+#
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: f2m-autohub
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120 --access-logfile - --error-logfile -
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: f2m-autohub-db
+          property: connectionString
+      - key: APP_TIMEZONE
+        value: Asia/Manila
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: SEED_DATA
+        value: "1"
+      # Keep the production database free of sample customers/requests.
+      # Set to "1" if you want demo workflow records for a showcase deploy.
+      - key: SEED_DEMO_DATA
+        value: "0"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+databases:
+  - name: f2m-autohub-db
+    databaseName: f2m_autohub
+    user: f2m
+    plan: free
+    region: singapore

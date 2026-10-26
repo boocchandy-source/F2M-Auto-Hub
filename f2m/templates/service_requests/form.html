@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_header, customer_select, field_error %}
+{% block title %}Edit service request{% endblock %}
+
+{% block content %}
+{% call page_header('Edit service request', 'Update the request details or move it through the service workflow.', 'REQUEST #' ~ service_request.id) %}
+  <a class="btn btn-secondary" href="{{ url_for('main.service_requests') }}">{{ icon('chevron-left', 16) }} Back to requests</a>
+{% endcall %}
+
+<div class="form-layout form-layout-narrow">
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>{{ service_request.service }}</h2>
+        <p>Logged {{ service_request.created_at|pretty_datetime }}</p>
+      </div>
+      {{ status_badge(service_request.status) }}
+    </div>
+    <form method="post" class="form-grid form-grid-2">
+      {{ csrf_field() }}
+      <div class="form-field span-all">
+        <label for="customer_id">Customer <span class="req">*</span></label>
+        {{ customer_select(customers, form.customer_id) }}
+        {{ field_error(errors, 'customer_id') }}
+      </div>
+      <div class="form-field span-all">
+        <label for="service">Service requested <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('service') else '' }}" id="service" name="service" type="text" maxlength="200" list="service-options" value="{{ form.service }}" required>
+        {{ field_error(errors, 'service') }}
+      </div>
+      <div class="form-field">
+        <label for="request_date">Request date <span class="req">*</span></label>
+        <input class="input{{ ' is-invalid' if errors.get('request_date') else '' }}" id="request_date" name="request_date" type="date" value="{{ form.request_date }}" required>
+        {{ field_error(errors, 'request_date') }}
+      </div>
+      <div class="form-field">
+        <label for="status">Status</label>
+        <select class="input" id="status" name="status">
+          {% for status in status_choices %}<option value="{{ status }}" {% if form.status == status %}selected{% endif %}>{{ status }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-field span-all">
+        <label for="technician">Technician</label>
+        <input class="input" id="technician" name="technician" type="text" maxlength="120" value="{{ form.technician }}">
+      </div>
+      <div class="form-field span-all">
+        <label for="notes">Notes</label>
+        <textarea class="input" id="notes" name="notes" rows="4" maxlength="2000">{{ form.notes }}</textarea>
+      </div>
+      <div class="form-actions span-all">
+        <button class="btn btn-primary" type="submit">{{ icon('check', 16) }} Save changes</button>
+        <a class="btn btn-ghost" href="{{ url_for('main.service_requests') }}">Cancel</a>
+      </div>
+    </form>
+  </section>
+
+  <aside class="side-stack">
+    <section class="panel panel-note">
+      <div class="panel-head"><div><h2>Workflow note</h2></div></div>
+      <p>Setting this request to <strong>Completed</strong> adds a matching entry to Service History if one does not already exist for the same customer, service, and date.</p>
+    </section>
+    <section class="panel panel-danger-zone">
+      <div class="panel-head"><div><h2>Delete request</h2><p>This only removes the request, not any service history already created.</p></div></div>
+      <form method="post" action="{{ url_for('main.service_request_delete', request_id=service_request.id) }}" data-confirm="Delete this service request? This cannot be undone.">
+        {{ csrf_field() }}
+        <button class="btn btn-danger btn-block" type="submit">{{ icon('trash', 16) }} Delete request</button>
+      </form>
+    </section>
+  </aside>
+</div>
+
+<datalist id="service-options">
+  {% for service in default_services %}<option value="{{ service }}"></option>{% endfor %}
+</datalist>
+{% endblock %}
