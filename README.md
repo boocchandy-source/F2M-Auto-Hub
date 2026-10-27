@@ -1,8 +1,15 @@
 # F2M Auto-Hub Management System
 
+[![CI](https://github.com/boocchandy-source/F2M-Auto-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/boocchandy-source/F2M-Auto-Hub/actions/workflows/ci.yml)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/boocchandy-source/F2M-Auto-Hub)
+
 A web version of the F2M Auto-Hub Tires & Mags Trading customer-service and
 automotive-shop system. The original Tkinter desktop program is still included as
 `armian F2M system.py`; this Flask application is the deployable web port.
+
+The repository is ready for GitHub → Render deployment: GitHub Actions runs the
+test suite on every push, Render's Blueprint deploys `main` after CI passes, and
+the private customer dataset is mounted as a secret instead of being committed.
 
 ## What it does
 
@@ -11,8 +18,9 @@ automotive-shop system. The original Tkinter desktop program is still included a
 - Dashboard with customer, vehicle, request, appointment, and concern totals.
 - Customer records with automatic vehicle creation and search.
 - Vehicle information with plate-number duplicate checks.
-- Daily Customer Record browser: **1,221 imported visit rows** across 127 dates,
-  with date selection, search, and pagination.
+- Daily Customer Record browser with date selection, search, and pagination. It
+  imports the private company workbook (1,221 visits in the current dataset) once
+  a local or mounted JSON file is supplied.
 - Service requests; marking a request **Completed** also creates a service-history
   entry.
 - Appointment scheduling with duplicate protection.
@@ -23,6 +31,7 @@ automotive-shop system. The original Tkinter desktop program is still included a
 - Responsive red/black/white admin UI, printable reports, and a `/healthz` endpoint
   for Render health checks.
 - First-run import is idempotent: restarts and redeploys do not duplicate data.
+- GitHub Actions CI, Dependabot updates, and Render auto-deploy from `main`.
 
 ## Requirements
 
@@ -59,6 +68,12 @@ Generate a secret key with:
 ```powershell
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+The real customer workbook is **not stored in git**. To import it locally, place
+the JSON at `f2m/data/customer_records.json`, or point `SEED_DATA_FILE` at it.
+Without the file the app starts with no imported visits and logs a warning; demo
+records are controlled separately by `SEED_DEMO_DATA`. See
+[`f2m/data/README.md`](f2m/data/README.md) for the format and a synthetic sample.
 
 Start the development server:
 
@@ -108,7 +123,9 @@ The suite covers authentication, CSRF rejection, login rate limiting, customer
 and vehicle CRUD, service-request completion, appointments, feedback,
 notifications, cascade deletes, the first-run workbook import, report rendering,
 Excel export, error pages, security headers, redirect/validation helpers, and
-Render's Postgres URL formats. It currently contains **44 tests**.
+Render's Postgres URL formats. Import tests use a small synthetic dataset, so they
+run without the private workbook. A local-only check verifies the real 1,221-row
+dataset when `f2m/data/customer_records.json` is present.
 
 Useful checks:
 
@@ -117,25 +134,63 @@ python -m compileall f2m wsgi.py run.py
 pytest -q
 ```
 
+GitHub Actions runs the same suite plus a production-entry-point smoke check on
+every push and pull request. The workflow is
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml); Dependabot keeps Python
+and Action versions current.
+
 ## Deploy to Render
 
-### Prepare the repository
+### GitHub and continuous integration
 
-Render deploys from a Git repository. From this folder, create one and push it to
-GitHub (or GitLab):
+This repository is already connected to
+[`boocchandy-source/F2M-Auto-Hub`](https://github.com/boocchandy-source/F2M-Auto-Hub).
+The deployment flow is:
+
+1. Commit and push to `main`.
+2. GitHub Actions installs dependencies, runs `pytest`, and smoke-tests
+   `wsgi:app`.
+3. Render's Blueprint deploys only after the CI check passes, then verifies
+   `/healthz`.
+
+If you recreate the repository from scratch:
 
 ```powershell
 git init
 git add .
 git commit -m "F2M Auto-Hub web system"
 git branch -M main
-# Create an empty repository on GitHub first, then:
+# Create an empty GitHub repository first, then:
 git remote add origin https://github.com/YOUR-ACCOUNT/YOUR-REPO.git
 git push -u origin main
 ```
 
-`.gitignore` already excludes `.venv/`, local databases, `.env`, and caches, so
-secrets and local data are not published. Do not commit a filled-in `.env`.
+`.gitignore` excludes `.venv/`, local databases, `.env`, caches, and
+`f2m/data/*` (except the documentation and synthetic example). Never commit a
+filled-in `.env` or the real customer records.
+
+### Private customer dataset (do not commit)
+
+The real workbook contains customer names and plate numbers, so it stays out of
+git. To seed a deployment safely:
+
+1. In the Render Dashboard open the service → **Environment** → **Secret Files**
+   → **Add Secret File**.
+2. Name it `customer_records.json` and paste the private JSON contents.
+3. Add the environment variable
+   `SEED_DATA_FILE=/etc/secrets/customer_records.json` (or uncomment the matching
+   line in the Blueprint before applying it).
+4. Save and redeploy. The importer runs on the first boot.
+5. If the service had already booted before the file was added, redeploy it. The
+   app deliberately does not write `seed_version` when the file is missing, so the
+   next boot imports the file. On a service with shell access,
+   `flask --app wsgi seed-db --force` imports it without wiping the database.
+6. With `render.disk.yaml`, copy the file onto the persistent disk and set
+   `SEED_DATA_FILE=/var/data/customer_records.json`.
+
+Without a mounted file the app starts with an empty visit list and logs a warning.
+`f2m/data/customer_records.example.json` is a synthetic sample for local
+development only; it is not imported automatically.
 
 ### Option A — free demo (default `render.yaml`)
 
@@ -149,9 +204,11 @@ database.
 5. Apply the Blueprint and wait for the deploy and health check to pass.
 6. Open the service URL and sign in as `admin` with the password you entered.
 
-The first boot imports the 1,221 Daily Customer Record rows. Demo records are
-disabled by default in the Blueprint; set `SEED_DEMO_DATA=1` and redeploy on an
-empty database if you want sample workflow data.
+On first boot the app imports the mounted Daily Customer Record file (1,221 rows
+for the current dataset). Without a mounted file it starts with an empty visit
+list. Demo records are disabled by default in the Blueprint; set
+`SEED_DEMO_DATA=1` and redeploy on an empty database if you want sample workflow
+data.
 
 **Important free-plan limits**
 
@@ -205,6 +262,7 @@ still spin down when idle.
 | `APP_TIMEZONE` | No | `Asia/Manila` | Timezone for dates and timestamps. |
 | `SESSION_COOKIE_SECURE` | No | `1` on Render, `0` otherwise | Set `0` only for local HTTP. |
 | `SEED_DATA` | No | `1` | Import the Daily Customer Record workbook on first boot. |
+| `SEED_DATA_FILE` | No | `f2m/data/customer_records.json` | Path to the private JSON. Set to a mounted Render Secret File path in production. |
 | `SEED_DEMO_DATA` | No | `1` (app); `0` in Blueprints | Add six demo customers and sample workflow records. |
 | `TRUST_PROXY_HEADERS` | No | `1` on Render | Trust Render's proxy headers for scheme and client IP. |
 | `PORT` | No | `5000` locally | Injected by Render/Gunicorn. |
@@ -219,10 +277,15 @@ Then set `ADMIN_PASSWORD_HASH` and remove `ADMIN_PASSWORD` from the environment.
 
 ## Data and seeding
 
-- The source workbook data lives in `f2m/data/customer_records.json`.
-- On first boot the app imports **1,221 visits**, **1,122 customers**, and
-  **1,113 vehicles**, then records `seed_version` in the `system_meta` table.
+- The private workbook is read from `f2m/data/customer_records.json` by default,
+  or from the path in `SEED_DATA_FILE`. It is deliberately **not committed**.
+- With the current company dataset, a successful first boot imports **1,221
+  visits**, **1,122 customers**, and **1,113 vehicles**, then records
+  `seed_version` in the `system_meta` table.
 - Subsequent boots skip the import, so deploys and restarts are safe.
+- If no readable workbook is found, the app logs a warning and does **not** write
+  `seed_version`. Mounting the file later and restarting (or running
+  `seed-db --force`) imports it without wiping existing data.
 - `SEED_DEMO_DATA=1` adds six demo customers plus sample appointments, requests,
   history, feedback, and notifications. It is helpful for a local walkthrough or a
   showcase deployment. Both Render Blueprints set it to `0` so a production
@@ -230,17 +293,22 @@ Then set `ADMIN_PASSWORD_HASH` and remove `ADMIN_PASSWORD` from the environment.
 - Visits are deduplicated on the complete row, not on `(date, record number)`,
   because the source workbook can repeat record numbers across different tables.
 - Demo records can be deleted from the UI after the first boot.
+- [`f2m/data/README.md`](f2m/data/README.md) documents the JSON format, and
+  `customer_records.example.json` provides synthetic rows for development.
 
 Maintenance commands (run against the configured database):
 
 ```powershell
-flask --app wsgi init-db     # create missing tables only
-flask --app wsgi seed-db     # import the workbook if it has not been imported
-flask --app wsgi reset-data  # DESTRUCTIVE: drop all tables, recreate, re-import
+flask --app wsgi init-db          # create missing tables only
+flask --app wsgi seed-db          # import the workbook if it has not been imported
+flask --app wsgi seed-db --force  # import missing rows even if a seed completed
+flask --app wsgi reset-data       # DESTRUCTIVE: drop all tables, recreate, re-import
 ```
 
-`reset-data` deletes every customer, visit, request, appointment, history record,
-concern, and notification. Back up first.
+`seed-db --force` is the safe choice after mounting the private file on an
+existing deployment; it does not delete data. `reset-data` deletes every customer,
+visit, request, appointment, history record, concern, and notification. Back up
+first.
 
 ## Project structure
 
@@ -257,10 +325,14 @@ f2m/                        Flask application package
   timeutil.py               Asia/Manila date/time helpers
   utils.py                  Shared validation and formatting helpers
   ui.py                     Navigation, icons, template filters
-  data/customer_records.json
+  data/README.md            Private seed-file format and setup
+  data/customer_records.example.json  Synthetic sample rows
   static/                   CSS, JS, logo, favicon
   templates/                Jinja templates
 tests/                      Pytest suite
+.github/workflows/ci.yml    GitHub Actions tests + production smoke check
+.github/dependabot.yml      Weekly Python and Actions update PRs
+SECURITY.md                 Vulnerability reporting and deployment baseline
 requirements.txt            Production dependencies
 requirements-dev.txt        Test dependencies
 run.py                      Local development server
@@ -272,6 +344,11 @@ Procfile                    Generic process definition for WSGI hosts
 
 ## Deployment notes
 
+- Every push to `main` runs GitHub Actions (`.github/workflows/ci.yml`). Both
+  Blueprints use `autoDeployTrigger: checksPass`, so Render deploys only after
+  that CI check succeeds. A failed check leaves the previous deployment live.
+- The private dataset must be supplied as a mounted file. It is gitignored and is
+  therefore absent from the GitHub repository and every Render build.
 - The production command is intentionally **one Gunicorn worker with eight
   threads**. This avoids two workers racing to seed the database on a cold start.
   Increase `--threads` rather than `--workers` if you need more concurrency.
@@ -298,6 +375,8 @@ Procfile                    Generic process definition for WSGI hosts
 | Login returns “Incorrect username or password” | Check `ADMIN_USERNAME` / `ADMIN_PASSWORD`. If using a hash, regenerate it with the command above. |
 | `429 Too many failed attempts` | Wait five minutes, or restart the process to clear the in-memory limiter. |
 | `400` “security token is invalid” | Refresh the page before submitting. Cookies must be enabled; changing `SECRET_KEY` invalidates old sessions. |
+| Deployed app shows 0 visits / “data file not found” in logs | Upload the private JSON as a Render Secret File and set `SEED_DATA_FILE` to its mount path, then redeploy. On a shell-enabled service, `flask --app wsgi seed-db --force` imports it without wiping data. |
+| App started empty before the data file was mounted | The seed marker is intentionally not written when the file is missing. Add `SEED_DATA_FILE`, restart or redeploy; existing demo/entered data is preserved. |
 | Health check fails on Render | Open the deploy logs. Confirm the database is available and not expired, and that `ADMIN_PASSWORD` was supplied. Startup retries database connections five times. |
 | First request after idle is slow | Expected on Render's free tier; the service spins down after 15 minutes. |
 | Free Postgres stopped working after a month | The free database expired after 30 days. Upgrade the database plan, attach another Postgres, or move to the persistent-disk Blueprint. Data in the expired database is not automatically migrated. |

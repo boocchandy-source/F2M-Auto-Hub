@@ -8,6 +8,7 @@ once, using deduplication so restarts and redeploys never create duplicates.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from flask import current_app
@@ -30,6 +31,18 @@ from .timeutil import now_str, today_iso, tomorrow_iso
 SEED_VERSION = "1"
 DATA_FILE = Path(__file__).resolve().parent / "data" / "customer_records.json"
 
+
+def seed_data_file() -> Path:
+    """Return the workbook JSON path, honoring the ``SEED_DATA_FILE`` override.
+
+    The company dataset contains customer names and plate numbers, so it is not
+    committed to the repository. Deployments can mount it as a Render secret file
+    and point this variable at the mounted path.
+    """
+    override = os.environ.get("SEED_DATA_FILE", "").strip()
+    return Path(override).expanduser() if override else DATA_FILE
+
+
 DEMO_CUSTOMERS = [
     ("MARIA L. SANTOS", "KCA 2147", "TOYOTA VIOS", "QUEZON, BUKIDNON", "JUN REYES"),
     ("JEROME P. CRUZ", "KBD 5832", "MITSUBISHI MONTERO", "MARAMAG, BUKIDNON", "MARK DELA CRUZ"),
@@ -40,16 +53,26 @@ DEMO_CUSTOMERS = [
 ]
 
 
-def _load_records() -> list[list[str]]:
-    if not DATA_FILE.exists():
-        current_app.logger.warning("Customer record data file not found: %s", DATA_FILE)
-        return []
+def _load_records() -> tuple[list[list[str]], bool]:
+    """Load the workbook rows and report whether a usable file was read."""
+    path = seed_data_file()
+    if not path.exists():
+        current_app.logger.warning(
+            "Customer record data file not found: %s. The app will start without "
+            "imported visits. Set SEED_DATA_FILE to a mounted JSON file to import "
+            "them later.",
+            path,
+        )
+        return [], False
     try:
-        payload = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        current_app.logger.error("Could not read %s: %s", DATA_FILE, exc)
-        return []
-    return payload if isinstance(payload, list) else []
+        current_app.logger.error("Could not read %s: %s", path, exc)
+        return [], False
+    if not isinstance(payload, list):
+        current_app.logger.error("Customer record file %s is not a JSON array.", path)
+        return [], False
+    return payload, True
 
 
 def _text(value, limit: int) -> str:
@@ -76,7 +99,7 @@ def _import_visits(records: list[list[str]]) -> int:
     }
     rows: list[Visit] = []
     for record in records:
-        if len(record) < 7:
+        if not isinstance(record, (list, tuple)) or len(record) < 7:
             continue
         visit_date = str(record[0] or "").strip()[:10]
         record_no = str(record[1] or "").strip()
@@ -128,7 +151,7 @@ def _import_customers(records: list[list[str]]) -> int:
     }
     rows: list[Customer] = []
     for record in records:
-        if len(record) < 7:
+        if not isinstance(record, (list, tuple)) or len(record) < 7:
             continue
         record_no = str(record[1] or "").strip()
         name = _text(record[4], 200)
@@ -413,12 +436,18 @@ def _days_ago(days: int) -> str:
 
 
 def seed_database(force: bool = False) -> dict[str, int | bool]:
-    """Create the source records once. Safe to call on every startup."""
+    """Create the source records once. Safe to call on every startup.
+
+    The workbook marker is only written when a data file was actually read. This
+    matters for privacy-preserving deployments: if the private JSON is supplied
+    later (for example as a Render secret file), the next start or
+    ``flask --app wsgi seed-db --force`` will still import it.
+    """
     meta = db.session.get(SystemMeta, "seed_version")
     if meta and meta.value == SEED_VERSION and not force:
         return {"skipped": True}
 
-    records = _load_records()
+    records, data_available = _load_records()
     stats: dict[str, int | bool] = {
         "visits": _import_visits(records),
         "customers": _import_customers(records),
@@ -428,11 +457,15 @@ def seed_database(force: bool = False) -> dict[str, int | bool]:
     if current_app.config.get("SEED_DEMO_DATA", True):
         stats.update(_seed_demo_records())
 
-    meta = db.session.get(SystemMeta, "seed_version")
-    if meta is None:
-        db.session.add(SystemMeta(key="seed_version", value=SEED_VERSION))
+    if data_available:
+        meta = db.session.get(SystemMeta, "seed_version")
+        if meta is None:
+            db.session.add(SystemMeta(key="seed_version", value=SEED_VERSION))
+        else:
+            meta.value = SEED_VERSION
     else:
-        meta.value = SEED_VERSION
+        stats["data_file_missing"] = True
+
     db.session.commit()
 
     current_app.logger.info(
@@ -441,4 +474,9 @@ def seed_database(force: bool = False) -> dict[str, int | bool]:
         stats["customers"],
         stats["vehicles"],
     )
+    if not data_available:
+        current_app.logger.warning(
+            "The customer record import is incomplete because no readable data "
+            "file was found. Set SEED_DATA_FILE and restart to import it."
+        )
     return stats

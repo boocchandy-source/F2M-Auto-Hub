@@ -10,7 +10,11 @@ htmlcov/
 
 # Local data and secrets
 instance/
-f2m/data/
+# Keep customer PII out of the public repository. Only the documentation and
+# the synthetic example file are tracked.
+f2m/data/*
+!f2m/data/README.md
+!f2m/data/customer_records.example.json
 *.db
 *.sqlite3
 .env

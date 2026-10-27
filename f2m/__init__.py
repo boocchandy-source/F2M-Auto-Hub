@@ -16,6 +16,7 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
+import click
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from sqlalchemy import event
@@ -314,11 +315,16 @@ def create_app(test_config: dict | None = None) -> Flask:
         print("Database tables are ready.")
 
     @app.cli.command("seed-db")
-    def seed_db_command():
+    @click.option(
+        "--force",
+        is_flag=True,
+        help="Re-check the source file and import any missing rows, even if a previous seed completed.",
+    )
+    def seed_db_command(force: bool):
         """Import the daily customer record workbook once."""
         with app.app_context():
             db.create_all()
-            stats = seed_database()
+            stats = seed_database(force=force)
         print(f"Seed complete: {stats}")
 
     @app.cli.command("reset-data")

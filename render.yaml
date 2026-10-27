@@ -24,7 +24,8 @@ services:
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120 --access-logfile - --error-logfile -
     healthCheckPath: /healthz
-    autoDeployTrigger: commit
+    # Deploy only after the GitHub Actions CI check on the commit passes.
+    autoDeployTrigger: checksPass
     envVars:
       - key: SECRET_KEY
         generateValue: true
@@ -42,6 +43,10 @@ services:
         value: "1"
       - key: SEED_DATA
         value: "1"
+      # Optional: upload the private customer records JSON as a Render Secret
+      # File, then uncomment this variable. Keep the real file out of git.
+      # - key: SEED_DATA_FILE
+      #   value: /etc/secrets/customer_records.json
       # Keep the production database free of sample customers/requests.
       # Set to "1" if you want demo workflow records for a showcase deploy.
       - key: SEED_DEMO_DATA

@@ -14,6 +14,8 @@ Files:
 - wsgi.py                - production entry point (gunicorn wsgi:app).
 - render.yaml            - Render Blueprint: free web service + free Postgres.
 - render.disk.yaml       - Render Blueprint: paid web service + persistent SQLite disk.
+- .github/workflows/ci.yml - GitHub Actions tests and production smoke check.
+- SECURITY.md            - vulnerability reporting and deployment baseline.
 - requirements.txt       - production Python packages.
 - requirements-dev.txt   - test packages.
 
@@ -32,6 +34,17 @@ before putting the system online.
 Tests:
 - pip install -r requirements-dev.txt
 - pytest
+- GitHub Actions runs the same suite plus a production smoke check on every push.
+
+Private customer data:
+- The real f2m/data/customer_records.json is not included in the repository
+  because it contains customer names and plate numbers.
+- Put it locally at f2m/data/customer_records.json, or set SEED_DATA_FILE.
+- On Render, upload it as a Secret File and set
+  SEED_DATA_FILE=/etc/secrets/customer_records.json.
+- f2m/data/customer_records.example.json contains synthetic development rows.
+- The importer is idempotent. If the app started before the file was mounted,
+  redeploy or run: flask --app wsgi seed-db --force
 
 Deploying to Render:
 - Push the folder to GitHub, then create a new Blueprint in Render.
@@ -44,8 +57,9 @@ Deploying to Render:
 - Free web services spin down after 15 minutes of inactivity and take a little
   longer to respond on the next request.
 
-The web app imports the company's 1,221 Daily Customer Record rows once on first
-start. The import is idempotent, so restarts and redeploys do not duplicate data.
+The web app imports the company's 1,221 Daily Customer Record rows once the
+private file is available. The import is idempotent, so restarts and redeploys do
+not duplicate data.
 
 DESKTOP VERSION (original)
 --------------------------
