@@ -52,3 +52,28 @@ jobs:
           DATA_DIR: ${{ runner.temp }}/f2m-data
         run: |
           python -c "from wsgi import app; c = app.test_client(); assert c.get('/healthz').status_code == 200; assert c.get('/login').status_code == 200; print('production entry point OK')"
+
+      - name: Smoke-test the Gunicorn command
+        env:
+          SECRET_KEY: ci-only-secret-key
+          ADMIN_PASSWORD: ci-only-admin-password
+          SEED_DATA: "0"
+          DATA_DIR: ${{ runner.temp }}/f2m-gunicorn-data
+        run: |
+          gunicorn wsgi:app --bind 127.0.0.1:8000 --workers 1 --threads 2 --timeout 30 --access-logfile - --error-logfile - &
+          GUNICORN_PID=$!
+          trap 'kill "$GUNICORN_PID" 2>/dev/null || true' EXIT
+          ready=0
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/healthz > /dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Gunicorn did not become ready"
+            exit 1
+          fi
+          curl -fsS http://127.0.0.1:8000/login > /dev/null
+          echo "Gunicorn production command OK"
