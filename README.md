@@ -177,10 +177,11 @@ git. To seed a deployment safely:
 1. In the Render Dashboard open the service → **Environment** → **Secret Files**
    → **Add Secret File**.
 2. Name it `customer_records.json` and paste the private JSON contents.
-3. Both Blueprints already set
-   `SEED_DATA_FILE=/etc/secrets/customer_records.json`, so no extra variable is
-   needed when you use that filename. If you use a different name or location,
-   set `SEED_DATA_FILE` to the matching path.
+3. Both Blueprints already point `SEED_DATA_FILE` at their storage location
+   (`/etc/secrets/customer_records.json` for the free Blueprint,
+   `/var/data/customer_records.json` for the disk Blueprint), so no extra
+   variable is needed when you use those names. If you use a different name or
+   location, set `SEED_DATA_FILE` to the matching path.
 4. Save and redeploy. The importer runs on the first boot.
 5. If the service had already booted before the file was added, redeploy it. The
    app deliberately does not write `seed_version` when the file is missing, so the
