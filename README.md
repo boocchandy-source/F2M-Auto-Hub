@@ -380,7 +380,7 @@ Procfile                    Generic process definition for WSGI hosts
 | `400` “security token is invalid” | Refresh the page before submitting. Cookies must be enabled; changing `SECRET_KEY` invalidates old sessions. |
 | Deployed app shows 0 visits / “data file not found” in logs | Upload the private JSON as a Render Secret File and set `SEED_DATA_FILE` to its mount path, then redeploy. On a shell-enabled service, `flask --app wsgi seed-db --force` imports it without wiping data. |
 | App started empty before the data file was mounted | The seed marker is intentionally not written when the file is missing. Add `SEED_DATA_FILE`, restart or redeploy; existing demo/entered data is preserved. |
-| Health check fails on Render | Open the deploy logs. Confirm the database is available and not expired, and that `ADMIN_PASSWORD` was supplied. Startup retries database connections five times. |
+| Health check fails on Render | Open the deploy logs. Confirm the database is available and not expired, and check for startup errors. Startup retries database connections five times. |
 | First request after idle is slow | Expected on Render's free tier; the service spins down after 15 minutes. |
 | Free Postgres stopped working after a month | The free database expired after 30 days. Upgrade the database plan, attach another Postgres, or move to the persistent-disk Blueprint. Data in the expired database is not automatically migrated. |
 | `database is locked` | Use one Gunicorn worker/instance with SQLite. For higher concurrency, use PostgreSQL. |
