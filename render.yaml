@@ -41,12 +41,16 @@ services:
         value: Asia/Manila
       - key: SESSION_COOKIE_SECURE
         value: "1"
+      - key: TRUST_PROXY_HEADERS
+        value: "1"
       - key: SEED_DATA
         value: "1"
-      # Optional: upload the private customer records JSON as a Render Secret
-      # File, then uncomment this variable. Keep the real file out of git.
-      # - key: SEED_DATA_FILE
-      #   value: /etc/secrets/customer_records.json
+      # Upload the private customer records JSON as a Render Secret File named
+      # customer_records.json. This path is preconfigured so the first boot
+      # imports it automatically. Override the value if you use another name.
+      # Keep the real file out of git.
+      - key: SEED_DATA_FILE
+        value: /etc/secrets/customer_records.json
       # Keep the production database free of sample customers/requests.
       # Set to "1" if you want demo workflow records for a showcase deploy.
       - key: SEED_DEMO_DATA

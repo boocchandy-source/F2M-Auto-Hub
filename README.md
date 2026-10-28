@@ -177,16 +177,18 @@ git. To seed a deployment safely:
 1. In the Render Dashboard open the service → **Environment** → **Secret Files**
    → **Add Secret File**.
 2. Name it `customer_records.json` and paste the private JSON contents.
-3. Add the environment variable
-   `SEED_DATA_FILE=/etc/secrets/customer_records.json` (or uncomment the matching
-   line in the Blueprint before applying it).
+3. Both Blueprints already set
+   `SEED_DATA_FILE=/etc/secrets/customer_records.json`, so no extra variable is
+   needed when you use that filename. If you use a different name or location,
+   set `SEED_DATA_FILE` to the matching path.
 4. Save and redeploy. The importer runs on the first boot.
 5. If the service had already booted before the file was added, redeploy it. The
    app deliberately does not write `seed_version` when the file is missing, so the
    next boot imports the file. On a service with shell access,
    `flask --app wsgi seed-db --force` imports it without wiping the database.
-6. With `render.disk.yaml`, copy the file onto the persistent disk and set
-   `SEED_DATA_FILE=/var/data/customer_records.json`.
+6. With `render.disk.yaml`, copy the file onto the persistent disk at
+   `/var/data/customer_records.json` (the Blueprint already points
+   `SEED_DATA_FILE` there).
 
 Without a mounted file the app starts with an empty visit list and logs a warning.
 `f2m/data/customer_records.example.json` is a synthetic sample for local
@@ -262,7 +264,7 @@ still spin down when idle.
 | `APP_TIMEZONE` | No | `Asia/Manila` | Timezone for dates and timestamps. |
 | `SESSION_COOKIE_SECURE` | No | `1` on Render, `0` otherwise | Set `0` only for local HTTP. |
 | `SEED_DATA` | No | `1` | Import the Daily Customer Record workbook on first boot. |
-| `SEED_DATA_FILE` | No | `f2m/data/customer_records.json` | Path to the private JSON. Set to a mounted Render Secret File path in production. |
+| `SEED_DATA_FILE` | No | `f2m/data/customer_records.json` | Path to the private JSON. Both Blueprints set it to the mounted Secret File path (`/etc/secrets/customer_records.json` or `/var/data/customer_records.json`). |
 | `SEED_DEMO_DATA` | No | `1` (app); `0` in Blueprints | Add six demo customers and sample workflow records. |
 | `TRUST_PROXY_HEADERS` | No | `1` on Render | Trust Render's proxy headers for scheme and client IP. |
 | `PORT` | No | `5000` locally | Injected by Render/Gunicorn. |

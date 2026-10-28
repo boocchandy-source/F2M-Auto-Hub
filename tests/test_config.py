@@ -22,3 +22,10 @@ def test_leaves_other_database_urls_untouched():
         _normalize_database_url("postgresql+psycopg://user:pass@db.example/f2m")
         == "postgresql+psycopg://user:pass@db.example/f2m"
     )
+
+
+def test_rewrites_legacy_psycopg2_urls_to_psycopg3():
+    assert (
+        _normalize_database_url("postgresql+psycopg2://user:pass@db.example/f2m")
+        == "postgresql+psycopg://user:pass@db.example/f2m"
+    )

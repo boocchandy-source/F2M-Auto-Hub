@@ -42,12 +42,15 @@ services:
         value: Asia/Manila
       - key: SESSION_COOKIE_SECURE
         value: "1"
+      - key: TRUST_PROXY_HEADERS
+        value: "1"
       - key: SEED_DATA
         value: "1"
-      # Optional: copy customer_records.json onto the persistent disk, then
-      # uncomment this variable. Keep the real file out of git.
-      # - key: SEED_DATA_FILE
-      #   value: /var/data/customer_records.json
+      # Copy the private customer_records.json onto the persistent disk at this
+      # path and the first boot imports it automatically. Override the value if
+      # you keep the file elsewhere. Keep the real file out of git.
+      - key: SEED_DATA_FILE
+        value: /var/data/customer_records.json
       # Keep the production database free of sample customers/requests.
       # Set to "1" if you want demo workflow records for a showcase deploy.
       - key: SEED_DEMO_DATA

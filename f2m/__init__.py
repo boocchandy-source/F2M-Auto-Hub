@@ -58,8 +58,10 @@ def _normalize_database_url(raw_url: str) -> str:
         return "postgresql+psycopg://" + url[len("postgres://") :]
     if url.startswith("postgresql://"):
         return "postgresql+psycopg://" + url[len("postgresql://") :]
-    if url.startswith("postgresql+psycopg://") or url.startswith("postgresql+psycopg2://"):
-        return url
+    if url.startswith("postgresql+psycopg2://"):
+        # Only psycopg 3 is installed; keep legacy URLs working instead of
+        # failing at startup with "No module named 'psycopg2'".
+        return "postgresql+psycopg://" + url[len("postgresql+psycopg2://") :]
     return url
 
 
